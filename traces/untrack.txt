@@ -1,0 +1,10 @@
+YOLO  91ab364 Python-3.9.19 torch-1.7.1+cu110 CUDA:0 (NVIDIA GeForce RTX 3060, 12287MiB)
+
+importlib_resources
+matplotlib
+mpl_toolkits
+numpy
+scipy
+six.py
+torch
+torchvision
