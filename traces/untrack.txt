@@ -1,5 +1,14 @@
 YOLO  91ab364 Python-3.9.19 torch-1.7.1+cu110 CUDA:0 (NVIDIA GeForce RTX 3060, 12287MiB)
 
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2020 NVIDIA Corporation
+Built on Mon_Nov_30_19:15:10_Pacific_Standard_Time_2020
+Cuda compilation tools, release 11.2, V11.2.67
+Build cuda_11.2.r11.2/compiler.29373293_0
+
+>>> print(torch.backends.cudnn.version())
+8004
+
 importlib_resources=6.1.2
 matplotlib=3.8.3
 mpl_toolkits
