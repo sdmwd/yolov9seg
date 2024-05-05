@@ -1,0 +1,18 @@
+YOLO  91ab364 Python-3.9.19 torch-1.7.1+cu110 CUDA:0 (NVIDIA GeForce RTX 3060, 12287MiB)
+
+conda install -c conda-forge gitpython ipython matplotlib numpy opencv Pillow psutil pyyaml requests scipy tqdm tensorboard pandas seaborn albumentations -y
+
+scr.py
+
+pip install "opencv-python>=4.1.1" "Pillow>=7.1.2" "PyYAML>=5.3.1" "requests>=2.23.0" "scipy>=1.4.1" "thop>=0.1.1" "torch>=1.7.0" "torchvision>=0.8.1" "tqdm>=4.64.0" "tensorboard>=2.4.1" "pandas>=1.1.4" "seaborn>=0.11.0" "albumentations>=1.0.3" "pycocotools>=2.0" "protobuf<=3.20.1"
+
+conda env update --name .conda --file env_create/environment.yml --prune 
+
+importlib_resources=6.1.2
+matplotlib=3.8.3
+mpl_toolkits
+numpy=1.26.4
+scipy=1.12.0
+six.py
+torch=1.7.1+cu110
+torchvision=0.7.2
