@@ -25,3 +25,6 @@ dependencies:
   - torchvision>=0.8.1
   - cudatoolkit=10.1 
   - protobuf<=3.20.1
+  - pip:
+      - thop
+
