@@ -77,3 +77,4 @@ https://conda.anaconda.org/conda-forge/noarch/stack_data-0.6.2-pyhd8ed1ab_0.cond
 https://conda.anaconda.org/conda-forge/noarch/ipython-8.18.1-pyh7428d3b_3.conda
 https://conda.anaconda.org/conda-forge/noarch/jupyter_client-8.6.1-pyhd8ed1ab_0.conda
 https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.3-pyha63f2e9_0.conda
+https://conda.anaconda.org/conda-forge/win-64/yggdrasil.pytorch-1.10.1.post1-py39hcbf5309_0.conda

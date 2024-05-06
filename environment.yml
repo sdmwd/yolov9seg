@@ -2,6 +2,7 @@ name: yolov9segconda
 channels:
   - pytorch
   - conda-forge
+  - anaconda
   - defaults
 dependencies:
   - gitpython
@@ -11,6 +12,8 @@ dependencies:
   - opencv>=4.1.1
   - pillow>=7.1.2
   - psutil
+  - pip
+  - python
   - pyyaml>=5.3.1
   - requests>=2.23.0
   - scipy>=1.4.1
@@ -20,7 +23,6 @@ dependencies:
   - seaborn>=0.11.0
   - albumentations>=1.0.3
   - pycocotools>=2.0
-  - thop
   - pytorch>=1.7.0
   - torchvision>=0.8.1
   - cudatoolkit=10.1 
