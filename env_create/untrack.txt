@@ -1,6 +1,0 @@
-YOLO  91ab364 Python-3.9.19 torch-1.7.1+cu110 CUDA:0 (NVIDIA GeForce RTX 3060, 12287MiB)
-
-$ conda install tensorflow --solver=libmamba
-$ conda config --set solver libmamba
-$ conda install numpy --solver=classic
-https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html
