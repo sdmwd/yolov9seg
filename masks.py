@@ -3,6 +3,43 @@ def fus_masks(groupes_de_dommages):
     Fusionne les masques qui ont le même type de dommage et au moins un pixel en commun,
     tout en excluant les masques individuels qui ont été utilisés dans une fusion.
     """
+    # Define the priority mapping
+    damage_priority = {5: 4, 3: 2, 2: 3, 1: 1}  # Priorité des types de dommage
+    masks_fus = np.zeros_like(next(iter(groupes_de_dommages.values()))[0][1], dtype=bool)
+    
+    # Extract the list of all masks with their damage type and index
+    all_masks = [
+        (dtype, idx, mask) 
+        for dtype, masks in groupes_de_dommages.items() 
+        for idx, mask in masks
+    ]
+    all_masks.sort(key=lambda x: damage_priority.get(x[0], 0), reverse=True)
+
+    # Initialize structures to store merged masks and covered pixels
+    merged_masks = {}
+    covered_pixels = np.zeros_like(masks_fus, dtype=bool)
+
+    # Process and merge masks based on priority
+    for dtype, idx, current_tuple in all_masks:
+        _, current_mask = current_tuple  # Extract the mask part from the tuple
+        current_mask = current_mask.astype(bool)
+        effective_mask = current_mask & ~covered_pixels
+
+        if np.any(effective_mask):
+            if idx not in merged_masks:
+                merged_masks[idx] = {}
+
+            merged_masks[idx][dtype] = effective_mask.astype(float)
+            covered_pixels |= effective_mask
+
+    print("Masques fusionnés:", merged_masks)
+    return merged_masks
+
+def fus_masks(groupes_de_dommages):
+    """
+    Fusionne les masques qui ont le même type de dommage et au moins un pixel en commun,
+    tout en excluant les masques individuels qui ont été utilisés dans une fusion.
+    """
 
     # Define the priority mapping and set default mask container
     damage_priority = {5: 4, 3: 2, 2: 3, 1: 1}  # Priorité des types de dommage
