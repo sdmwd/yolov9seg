@@ -4,7 +4,6 @@ import numpy as np
 def group_masks_by_overlap(groupes_de_dommages):
     """
     Regroupe les masques qui ont le même type de dommage et au moins un pixel en commun.
-
     """
     grouped_results = {}
 
@@ -37,42 +36,17 @@ def group_masks_by_overlap(groupes_de_dommages):
     return grouped_results
 
 
-dummy_masks = {
-    0: [
-        (1, np.array([[1, 1, 0, 0, 0, 0, 1, 1, 0, 0]], dtype=bool)),
-        (2, np.array([[0, 1, 1, 0, 0, 0, 1, 0, 1, 0]], dtype=bool))
-    ],
-    1: [
-        (3, np.array([[0, 0, 1, 1, 0, 0, 1, 1, 0, 0]], dtype=bool)),
-        (4, np.array([[1, 0, 1, 1, 0, 0, 0, 0, 1, 1]], dtype=bool))
-    ],
-    2: [
-        (5, np.array([[0, 0, 1, 1, 0, 1, 1, 0, 0, 1]], dtype=bool)),
-        (6, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
-        (8, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
-        (9, np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=bool)),
-    ]
-}
-
-grouped_masks = group_masks_by_overlap(dummy_masks)
-
-for k, v in grouped_masks.items():
-    print('----------------------------------------')
-    print(k)
-    print(v)
-
-
-def fusionner_masques(groupes_de_dommages):
+def filter_masks_on_severity(groupes_de_dommages):
     """
-    Fusionne les masques qui ont le même type de dommage et au moins un pixel en commun, 
-    tout en excluant les masques individuels qui ont été utilisés dans une fusion.
+    Filtre les masques selon leur sévérité lors des superpositions.
     """
-    damage_priority = {1: 3, 2: 1, 3: 2, 4: 4}  # Priorité des types de dommage
+    damage_priority = {0:0, 1:1, 2:2}  # Priorité des types de dommage
     masques_fusionnes = {}
     covered_pixels = np.zeros_like(
         next(iter(groupes_de_dommages.values()))[0][1], dtype=bool)
     all_masks = [(dtype, idx, mask) for dtype,
                  masks in groupes_de_dommages.items() for idx, mask in masks]
+    
     all_masks.sort(key=lambda x: damage_priority[x[0]], reverse=True)
 
     for dtype, idx, current_mask in all_masks:
@@ -86,3 +60,41 @@ def fusionner_masques(groupes_de_dommages):
             covered_pixels |= effective_mask
 
     return masques_fusionnes
+
+
+dummy_masks = {
+    0: [
+        (1, np.array([[1, 1, 0, 0, 0, 0, 1, 1, 0, 0]], dtype=bool)),
+        (2, np.array([[0, 1, 1, 0, 0, 0, 1, 0, 1, 0]], dtype=bool))
+    ],
+    1: [
+        (3, np.array([[0, 0, 1, 1, 0, 0, 1, 1, 0, 0]], dtype=bool)),
+        (4, np.array([[1, 0, 1, 1, 0, 0, 0, 0, 1, 1]], dtype=bool)),
+        (7, np.array([[0, 0, 0, 0, 1, 1, 0, 0, 0, 0]], dtype=bool)),
+        (13, np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=bool)),
+    ],
+    2: [
+        (5, np.array([[0, 0, 1, 1, 0, 1, 1, 0, 0, 1]], dtype=bool)),
+        (6, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
+        (10, np.array([[1, 0, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
+        (11, np.array([[1, 0, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
+        (8, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
+        (9, np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=bool)),
+        (12, np.array([[0, 0, 0, 0, 1, 0, 0, 0, 1, 0]], dtype=bool)),
+    ]
+}
+
+
+grouped_masks = group_masks_by_overlap(dummy_masks)
+for k, v in grouped_masks.items():
+    print('----------------------------------------')
+    print(k)
+    print(v)
+    print('----------------------------------------')
+print('==============================================================')    
+masques_fusionnes = filter_masks_on_severity(grouped_masks)
+for k, v in masques_fusionnes.items():
+    print('----------------------------------------')
+    print(k)
+    print(v)
+    print('----------------------------------------')
