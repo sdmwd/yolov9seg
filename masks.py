@@ -1,91 +1,62 @@
 import numpy as np
 
 
-def grouper_masques_par_dommage(dm, dg):
+def group_masks_by_overlap(groupes_de_dommages):
     """
-    Grouper les masques par leurs types de dommage respectifs, 
-    en conservant les indices originaux et en excluant les masques vides.
+    Regroupe les masques qui ont le même type de dommage et au moins un pixel en commun.
 
     """
-    groupes_de_dommages = {}
-    for index, masque in dm.items():
-        if np.any(masque):
-            type_de_dommage = dg[index]
-            if type_de_dommage in groupes_de_dommages:
-                groupes_de_dommages[type_de_dommage].append((index, masque))
-            else:
-                groupes_de_dommages[type_de_dommage] = [(index, masque)]
-    return groupes_de_dommages
+    grouped_results = {}
+
+    for damage_type, mask_tuples in groupes_de_dommages.items():
+        merged_masks = []
+        remaining_masks = list(mask_tuples)
+
+        while remaining_masks:
+            first_idx, first_mask = remaining_masks.pop(0)
+            combined_group = [first_mask]
+            group_indices = [first_idx]
+
+            def mask_overlaps_group(new_mask, group):
+                return any(np.any(np.bitwise_and(new_mask, m)) for m in group)
+
+            new_remaining_masks = []
+            for idx, mask in remaining_masks:
+                if mask_overlaps_group(mask, combined_group):
+                    combined_group.append(mask)
+                    group_indices.append(idx)
+                else:
+                    new_remaining_masks.append((idx, mask))
+
+            remaining_masks = new_remaining_masks
+            combined_mask = np.bitwise_or.reduce(combined_group)
+            merged_masks.append((group_indices[0], combined_mask))
+
+        grouped_results[damage_type] = merged_masks
+
+    return grouped_results
 
 
-def calculer_overlap(masques_fusionnes, mp):
-    """
-    Calcule l'overlap entre les masques fusionnés (organisés par indice puis par type de dommage)
-    et un autre dictionnaire de masques (mp) indexé par indice.
-    """
-    for idx, types in masques_fusionnes.items():
-        for dtype in types.keys():
-            fusion_mask = types[dtype].astype(bool)
-            mp_mask = mp[idx].astype(bool)
-            overlap_mask = fusion_mask & mp_mask 
-            overlap_count = np.sum(overlap_mask)
-            total_mp_pixels = np.sum(mp_mask)
-            overlap_percentage = overlap_count / total_mp_pixels if total_mp_pixels > 0 else 0
-            masques_fusionnes[idx][dtype] = (types[dtype], overlap_percentage)
-        
-    return masques_fusionnes
-
-
-def fusionner_masques(groupes_de_dommages):
-    """
-    Fusionne les masques qui ont le même type de dommage et au moins un pixel en commun, 
-    tout en excluant les masques individuels qui ont été utilisés dans une fusion.
-    """
-    damage_priority = {1: 3, 2: 1, 3: 2, 4: 4}  # Priorité des types de dommage
-    masques_fusionnes = {}
-    covered_pixels = np.zeros_like(next(iter(groupes_de_dommages.values()))[0][1], dtype=bool)
-    all_masks = [(dtype, idx, mask) for dtype, masks in groupes_de_dommages.items() for idx, mask in masks]
-    all_masks.sort(key=lambda x: damage_priority[x[0]], reverse=True)
-
-    for dtype, idx, current_mask in all_masks:
-        current_mask = current_mask.astype(bool)
-        effective_mask = current_mask & ~covered_pixels
-
-        if np.any(effective_mask):
-            if idx not in masques_fusionnes:
-                masques_fusionnes[idx] = {}
-            masques_fusionnes[idx][dtype] = effective_mask.astype(float)  
-            covered_pixels |= effective_mask
-
-    return masques_fusionnes
-
-
-array_size = 509600
-dm = {
-    50: np.array([1, 0, 0, 0]),
-    51: np.array([0, 1, 0, 0]),
-    52: np.array([1, 0, 1, 0]),
-    53: np.array([0, 0, 0, 1]),
-
-}
-mp = {
-    50: np.array([1, 1, 1, 0]),
-    51: np.array([0, 1, 0, 0]),
-    52: np.array([1, 0, 1, 0]),
-    53: np.array([1, 1, 1, 1]),
+dummy_masks = {
+    0: [
+        (1, np.array([[1, 1, 0, 0, 0, 0, 1, 1, 0, 0]], dtype=bool)),
+        (2, np.array([[0, 1, 1, 0, 0, 0, 1, 0, 1, 0]], dtype=bool))
+    ],
+    1: [
+        (3, np.array([[0, 0, 1, 1, 0, 0, 1, 1, 0, 0]], dtype=bool)),
+        (4, np.array([[1, 0, 1, 1, 0, 0, 0, 0, 1, 1]], dtype=bool))
+    ],
+    2: [
+        (5, np.array([[0, 0, 1, 1, 0, 1, 1, 0, 0, 1]], dtype=bool)),
+        (6, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
+        (8, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
+        (9, np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=bool)),
+    ]
 }
 
-dg = {50: 1,
-      51: 1,
-      52: 2,
-      53: 3}
+grouped_masks = group_masks_by_overlap(dummy_masks)
 
-masques_groupes = grouper_masques_par_dommage(dm, dg)
-print("Résultat du regroupement:", masques_groupes)
-
-masques_fusionnes = fusionner_masques(masques_groupes)
-print("Résultat de la fusion:", masques_fusionnes)
-
-masques_fusionnes = calculer_overlap(masques_fusionnes, mp)
-print("Overlaps:", masques_fusionnes)
-
+for k, v in grouped_masks.items():
+    print('----------------------------------------')
+    print(k)
+    print(v)
