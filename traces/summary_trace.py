@@ -4,7 +4,6 @@ import os
 
 output_dir = "n:/YOLO/yolov9seg/traces"
 script_path = 'n:/YOLO/yolov9seg/predict.py'
-conda_dir = os.path.abspath('n:/YOLO/yolov9seg/.conda/lib')
 
 try:
     if not os.path.exists(output_dir):
@@ -14,7 +13,7 @@ except Exception as e:
     exit(1)
 
 tracer = trace.Trace(
-    ignoredirs=[sys.prefix, sys.exec_prefix, conda_dir],
+    ignoredirs=[sys.prefix, sys.exec_prefix],
     trace=1,
     count=0,
     countfuncs=1,
