@@ -64,23 +64,23 @@ def filter_masks_on_severity(groupes_de_dommages):
 
 dummy_masks = {
     0: [
-        (1, np.array([[1, 1, 0, 0, 0, 0, 1, 1, 0, 0]], dtype=bool)),
-        (2, np.array([[0, 1, 1, 0, 0, 0, 1, 0, 1, 0]], dtype=bool))
+        (1, np.array([[1, 1, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=bool)),
+        (2, np.array([[0, 1, 1, 0, 0, 0, 0, 0, 0, 0]], dtype=bool))
     ],
     1: [
-        (3, np.array([[0, 0, 1, 1, 0, 0, 1, 1, 0, 0]], dtype=bool)),
-        (4, np.array([[1, 0, 1, 1, 0, 0, 0, 0, 1, 1]], dtype=bool)),
+        (3, np.array([[0, 0, 0, 1, 0, 0, 1, 0, 0, 0]], dtype=bool)),
+        (4, np.array([[0, 0, 0, 1, 0, 0, 0, 0,0, 0]], dtype=bool)),
         (7, np.array([[0, 0, 0, 0, 1, 1, 0, 0, 0, 0]], dtype=bool)),
         (13, np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=bool)),
     ],
     2: [
-        (5, np.array([[0, 0, 1, 1, 0, 1, 1, 0, 0, 1]], dtype=bool)),
-        (6, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
-        (10, np.array([[1, 0, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
-        (11, np.array([[1, 0, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
-        (8, np.array([[1, 1, 0, 0, 0, 1, 0, 1, 0, 1]], dtype=bool)),
-        (9, np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=bool)),
-        (12, np.array([[0, 0, 0, 0, 1, 0, 0, 0, 1, 0]], dtype=bool)),
+        (5, np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]], dtype=bool)),
+        (6, np.array([[0, 0, 0, 0, 0, 0, 0, 1, 0, 1]], dtype=bool)),
+        (10, np.array([[0, 0, 0, 0, 0, 0, 0, 1, 0, 1]], dtype=bool)),
+        (11, np.array([[0, 0, 0, 0, 0, 0, 0, 1, 0, 1]], dtype=bool)),
+        (8, np.array([[0, 0, 0, 0, 0, 0, 0, 1, 0, 1]], dtype=bool)),
+        (9, np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=bool)),
+        (12, np.array([[0, 0, 0, 0, 0, 0, 0, 0, 1, 0]], dtype=bool)),
     ]
 }
 
