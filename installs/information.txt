@@ -10,6 +10,7 @@ mamba activate <environment_name>
 micromamba create --name <environment_name> --file spec-file.txt
 micromamba activate <environment_name>
 
+LILMAMBA
 Please make sure to update to at least conda 4.12.0:
 conda update -n base conda
 conda install -n base conda-libmamba-solver
