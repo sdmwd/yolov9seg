@@ -1,33 +1,35 @@
-def move_globals_and_combine_images(source_dir, output_dir_global, output_dir_combined):
-    # Ensure output directories exist
+import os
+import shutil
+import zipfile
+from PIL import Image, ImageChops
+
+def process_zip_files(folder_path, output_dir_global, output_dir_combined):
     os.makedirs(output_dir_global, exist_ok=True)
     os.makedirs(output_dir_combined, exist_ok=True)
-
-    # Dictionary to hold lists of images for each group
     grouped_images = {}
 
-    # Traverse through the directories
-    for root, dirs, files in os.walk(source_dir):
+    # Walk through the directory to find zip files
+    for root, _, files in os.walk(folder_path):
         for file in files:
-            # Full path to the current file
-            full_path = os.path.join(root, file)
-
-            # Check if the file ends with '_global.jpg' or other formats
-            if file.endswith('.jpg'):
-                # Extract the group key (BRAND_number_x)
-                group_key = '_'.join(file.split('_')[:3])
-                
-                if group_key not in grouped_images:
-                    grouped_images[group_key] = {'global': None, 'images': []}
-                
-                # Identify global image and separate handling
-                if file.endswith('_global.jpg'):
-                    grouped_images[group_key]['global'] = file
-                    # Move global images directly to the __srcs__ directory
-                    shutil.move(full_path, os.path.join(output_dir_global, file))
-                else:
-                    # Add image to the list in its group
-                    grouped_images[group_key]['images'].append(full_path)
+            if file.endswith('.zip'):
+                zip_path = os.path.join(root, file)
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    # Extract images and process them
+                    for member in zip_ref.namelist():
+                        if member.endswith('.jpg'):
+                            # Extract the file to temp directory for processing
+                            zip_ref.extract(member, 'temp')
+                            extracted_path = os.path.join('temp', member)
+                            # Determine the group key
+                            group_key = '_'.join(member.split('_')[:3])
+                            if group_key not in grouped_images:
+                                grouped_images[group_key] = {'global': None, 'images': []}
+                            
+                            if member.endswith('_global.jpg'):
+                                grouped_images[group_key]['global'] = member
+                                shutil.move(extracted_path, os.path.join(output_dir_global, member))
+                            else:
+                                grouped_images[group_key]['images'].append(extracted_path)
 
     # Combine the images for each group using pixel addition
     for group, info in grouped_images.items():
@@ -40,6 +42,19 @@ def move_globals_and_combine_images(source_dir, output_dir_global, output_dir_co
                 next_image = Image.open(img_path).convert('RGBA')
                 base_image = ImageChops.add(base_image, next_image)
 
+            # Convert to RGB before saving as JPEG
+            base_image = base_image.convert('RGB')
+
             # Save the combined image using the global image name in the VEHICULE directory
             combined_image_path = os.path.join(output_dir_combined, info['global'])
             base_image.save(combined_image_path)
+
+            # Clean up the extracted images to free up space
+            for img_path in info['images']:
+                os.remove(img_path)
+
+    # Remove the temporary directory after processing
+    shutil.rmtree('temp')
+
+# Usage
+process_zip_files('path/to/your/folders', 'path/to/__srcs__', 'path/to/VEHICULE')
