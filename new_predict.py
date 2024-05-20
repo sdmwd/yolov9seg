@@ -108,3 +108,84 @@ def predict(self, data: dict) -> dict:
         'scores': [item.tolist() for sublist in results for item in sublist],
         'classes': list(range(len(results)))
     }
+
+
+
+
+
+import torch
+import cv2
+import base64
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
+
+# Function to process a single image
+def process_image(image_str: str):
+    b_img = np.frombuffer(base64.b64decode(image_str.encode('ascii')), dtype=np.uint8)
+    im = cv2.imdecode(b_img, cv2.IMREAD_COLOR)
+    im = vges_transform(im)  # Apply your transform which includes T.Compose([Resize, ToTensor])
+    return im
+
+# Function to process a batch of images in parallel
+def process_batch(images: list):
+    with ThreadPoolExecutor() as executor:
+        batch_imgs = list(executor.map(process_image, images))
+    batch_imgs = torch.stack(batch_imgs)  # Stack images into a single tensor
+    return batch_imgs
+
+class vges_RequestHandler:
+    def __init__(self):
+        pass
+
+    def predict(self, data: dict) -> dict:
+        assert 'base64' in data, 'Invalid arguments: "base64" needed'
+        global vges_model
+        global vges_transform
+        global vges_device
+
+        # Reading and processing images received in base64
+        images = data['base64']
+        batch_imgs = process_batch(images)
+
+        print(f'Batch images shape: {batch_imgs.shape}')  # Debug: Check the shape
+
+        # Convert to tensor and move to device
+        x = batch_imgs.to(vges_device)
+        x = x.float() / 255.0  # Normalize
+        
+        print(f'Tensor shape before model: {x.shape}')  # Debug: Check the shape
+
+        # Run inference on the entire batch
+        with torch.no_grad():
+            output = vges_model(x)
+
+        print(f'Output shape: {output.shape}')  # Debug: Check the shape
+
+        # Construct the return object
+        result = {
+            'scores': output.cpu().numpy().tolist(),
+            'classes': list(range(output.shape[0]))
+        }
+
+        return result
+
+# Initialize and load model
+vges_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+vges_model = torch.nn.Sequential(
+    # Example model architecture
+    torch.nn.Linear(512, 10),  # Modify as needed
+    torch.nn.Sigmoid()
+)
+vges_model = vges_model.to(vges_device)
+vges_model.eval()
+
+# Example usage
+if __name__ == "__main__":
+    handler = vges_RequestHandler()
+    data = {
+        'base64': [
+            # list of base64 encoded image strings
+        ]
+    }
+    results = handler.predict(data)
+    print(results)
