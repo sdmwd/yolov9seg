@@ -31,4 +31,5 @@ meta = {
 }
 
 # Mixup 3D-3R
-
+# https://docs.ultralytics.com/fr/models/yolov9/#programmable-gradient-information-pgi
+ # https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov9e-seg.pt
