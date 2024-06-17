@@ -9,10 +9,11 @@ model = torch.hub.load('ultralytics/yolov5', 'custom',
 
 # Define the classes of objects to detect (damages on vehicles)
 # Update this list with actual class names
-classes = ['scratch', 'dent', 'rust']
+classes = ['a', 'b', 'c']
 
 # Open the video
-cap = cv2.VideoCapture('path/to/your/video.mp4')
+video_path = 'path/to/your/video.mp4'
+cap = cv2.VideoCapture(video_path)
 
 # Initialize DeepSORT object tracker
 tracker = DeepSort(max_age=30, n_init=3, nn_budget=100)

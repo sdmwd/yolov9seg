@@ -9,7 +9,7 @@ model = torch.hub.load('ultralytics/yolov5', 'custom',
 
 # Define the classes of objects to detect (damages on vehicles)
 # Update this list with actual class names
-classes = ['scratch', 'dent', 'rust']
+classes = ['a', 'b', 'c']
 
 # Open the video
 video_path = 'path/to/your/video.mp4'
