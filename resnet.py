@@ -5,6 +5,7 @@ from torchvision import datasets, models, transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import os
+import matplotlib.pyplot as plt
 
 # Step 1: Imports and Setup
 data_dir = 'path_to_your_dataset'
@@ -60,10 +61,16 @@ model = model.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-# Step 4: Training and Validation Loops
+# Step 4: Training and Validation Loops with Visualization
 def train_model(model, criterion, optimizer, num_epochs=25, save_best_model=True):
     best_model_wts = model.state_dict()
     best_acc = 0.0
+
+    # Lists to store loss and accuracy for plotting
+    train_losses = []
+    val_losses = []
+    train_accuracies = []
+    val_accuracies = []
 
     for epoch in range(num_epochs):
         print(f'Epoch {epoch+1}/{num_epochs}')
@@ -102,6 +109,14 @@ def train_model(model, criterion, optimizer, num_epochs=25, save_best_model=True
 
             print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
+            # Store loss and accuracy for plotting
+            if phase == 'train':
+                train_losses.append(epoch_loss)
+                train_accuracies.append(epoch_acc)
+            else:
+                val_losses.append(epoch_loss)
+                val_accuracies.append(epoch_acc)
+
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = model.state_dict()
@@ -114,9 +129,9 @@ def train_model(model, criterion, optimizer, num_epochs=25, save_best_model=True
     print(f'Best val Acc: {best_acc:4f}')
 
     model.load_state_dict(best_model_wts)
-    return model
+    return model, train_losses, val_losses, train_accuracies, val_accuracies
 
-model = train_model(model, criterion, optimizer, num_epochs)
+model, train_losses, val_losses, train_accuracies, val_accuracies = train_model(model, criterion, optimizer, num_epochs)
 
 # Step 5: Test the model
 model.eval()  # Set the model to evaluation mode
@@ -139,3 +154,25 @@ test_loss = test_loss / dataset_sizes['test']
 test_acc = test_corrects.double() / dataset_sizes['test']
 
 print(f'Test Loss: {test_loss:.4f} Acc: {test_acc:.4f}')
+
+# Step 6: Visualize the training process
+epochs = range(1, num_epochs + 1)
+
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(epochs, train_losses, 'b', label='Training loss')
+plt.plot(epochs, val_losses, 'r', label='Validation loss')
+plt.title('Training and validation loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(epochs, train_accuracies, 'b', label='Training accuracy')
+plt.plot(epochs, val_accuracies, 'r', label='Validation accuracy')
+plt.title('Training and validation accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+
+plt.show()
