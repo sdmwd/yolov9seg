@@ -56,7 +56,7 @@ for split in ['train', 'val', 'test']:
                 cropped_image_filename = f"{image_name}_box_{idx}.jpg"
                 cv2.imwrite(os.path.join(cropped_images_dir, split, cropped_image_filename), cropped_image)
 
-                # Recherche du masque correspondant
+                # Chercher le masque correspondant
                 found_mask = False
                 for class_name in os.listdir(os.path.join(main_dir, "photos")):
                     class_dir = os.path.join(main_dir, "photos", class_name)
@@ -68,7 +68,7 @@ for split in ['train', 'val', 'test']:
                             if mask is not None:
                                 # Recadrer le masque selon la bounding box
                                 cropped_mask = mask[y_min:y_max, x_min:x_max]
-                                cropped_mask_filename = f"{image_name}_mask_{idx}.png"
+                                cropped_mask_filename = f"{image_name}_mask_{class_name}_{idx}.png"
                                 cv2.imwrite(os.path.join(cropped_masks_dir, split, cropped_mask_filename), cropped_mask)
                                 
                                 # Créer le fichier d'annotation JSON pour SAM2
@@ -79,7 +79,7 @@ for split in ['train', 'val', 'test']:
                                     "class_id": int(class_id),
                                     "class_name": class_name
                                 }
-                                annotation_file_path = os.path.join(annotations_dir, split, f"{image_name}_box_{idx}.json")
+                                annotation_file_path = os.path.join(annotations_dir, split, f"{image_name}_box_{idx}_{class_name}.json")
                                 with open(annotation_file_path, "w") as ann_file:
                                     json.dump(annotation_data, ann_file)
                                 found_mask = True
