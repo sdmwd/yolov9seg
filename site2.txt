@@ -1,0 +1,162 @@
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+import cv2
+import numpy as np
+import base64
+
+app = Flask(__name__)
+socketio = SocketIO(app)
+
+# WebRTC signalisation - échange des offres et des réponses
+@socketio.on('offer')
+def handle_offer(offer):
+    # Le serveur reçoit une offre du client
+    emit('offer', offer, broadcast=True)
+
+@socketio.on('answer')
+def handle_answer(answer):
+    # Le serveur reçoit une réponse du client
+    emit('answer', answer, broadcast=True)
+
+@socketio.on('ice-candidate')
+def handle_ice_candidate(candidate):
+    # Le serveur reçoit un ICE candidate du client
+    emit('ice-candidate', candidate, broadcast=True)
+
+# Route pour servir le fichier HTML
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000)
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flux vidéo en temps réel - WebRTC</title>
+
+    <!-- Inclure le fichier CSS externe -->
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+
+    <div class="video-container">
+        <h1>Flux vidéo en temps réel avec WebRTC</h1>
+
+        <!-- Vidéo en direct depuis la caméra du client -->
+        <video id="localVideo" autoplay class="video" playsinline></video>
+
+        <h2 class="text-center mt-4">Vidéo traitée</h2>
+        <!-- Vidéo traitée renvoyée par le serveur -->
+        <video id="remoteVideo" autoplay class="video" playsinline></video>
+    </div>
+
+    <!-- Inclure le fichier JavaScript externe -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
+
+
+
+body {
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.video-container {
+    max-width: 800px;
+    width: 100%;
+    padding: 20px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.video {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+
+h1 {
+    text-align: center;
+    color: #343a40;
+    margin-bottom: 20px;
+}
+
+
+
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
+const socket = io.connect('http://localhost:5000');
+
+// Crée une connexion WebRTC
+const peerConnection = new RTCPeerConnection({
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' }  // Serveur STUN pour aider avec le NAT traversal
+    ]
+});
+
+// Lorsqu'un ICE candidate est généré par la connexion WebRTC
+peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+        socket.emit('ice-candidate', event.candidate);
+    }
+};
+
+// Quand un flux vidéo distant est reçu, il est affiché
+peerConnection.ontrack = (event) => {
+    remoteVideo.srcObject = event.streams[0];
+};
+
+// Capturer la vidéo locale
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then((stream) => {
+        localVideo.srcObject = stream;
+
+        // Ajouter les pistes vidéo locales à la connexion WebRTC
+        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+        // Créer une offre pour initier la connexion WebRTC
+        peerConnection.createOffer()
+            .then((offer) => {
+                peerConnection.setLocalDescription(offer);
+                socket.emit('offer', offer);  // Envoyer l'offre au serveur via Socket.IO
+            });
+    })
+    .catch((error) => {
+        console.error('Erreur lors de l\'accès à la caméra :', error);
+    });
+
+// Gérer la réception d'une offre WebRTC
+socket.on('offer', (offer) => {
+    peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+        .then(() => {
+            return peerConnection.createAnswer();
+        })
+        .then((answer) => {
+            peerConnection.setLocalDescription(answer);
+            socket.emit('answer', answer);  // Envoyer la réponse au serveur
+        });
+});
+
+// Gérer la réception d'une réponse WebRTC
+socket.on('answer', (answer) => {
+    peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+});
+
+// Gérer la réception d'un ICE candidate
+socket.on('ice-candidate', (candidate) => {
+    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+});
