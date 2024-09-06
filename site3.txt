@@ -1,0 +1,96 @@
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+
+app = Flask(__name__)
+socketio = SocketIO(app)
+
+# WebRTC signalisation - échange des offres et des réponses
+@socketio.on('offer')
+def handle_offer(offer):
+    # Le serveur reçoit une offre du client et la diffuse
+    emit('offer', offer, broadcast=True)
+
+@socketio.on('answer')
+def handle_answer(answer):
+    # Le serveur reçoit une réponse et la diffuse
+    emit('answer', answer, broadcast=True)
+
+@socketio.on('ice-candidate')
+def handle_ice_candidate(candidate):
+    # Le serveur reçoit un ICE candidate et le diffuse
+    emit('ice-candidate', candidate, broadcast=True)
+
+# Route pour servir le fichier HTML
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000)
+
+
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
+const socket = io.connect('http://localhost:5000');
+
+// Crée une connexion WebRTC sans serveur STUN (machines dans la même DMZ)
+const peerConnection = new RTCPeerConnection({
+    iceServers: []  // Pas besoin de serveurs STUN dans une DMZ où les machines peuvent se voir
+});
+
+// Lorsqu'un ICE candidate est généré par la connexion WebRTC
+peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+        socket.emit('ice-candidate', event.candidate);
+    }
+};
+
+// Quand un flux vidéo distant est reçu, il est affiché
+peerConnection.ontrack = (event) => {
+    remoteVideo.srcObject = event.streams[0];
+};
+
+// Capturer la vidéo locale
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then((stream) => {
+        localVideo.srcObject = stream;
+
+        // Ajouter les pistes vidéo locales à la connexion WebRTC
+        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+        // Créer une offre pour initier la connexion WebRTC
+        peerConnection.createOffer()
+            .then((offer) => {
+                peerConnection.setLocalDescription(offer);
+                socket.emit('offer', offer);  // Envoyer l'offre au serveur via Socket.IO
+            });
+    })
+    .catch((error) => {
+        console.error('Erreur lors de l\'accès à la caméra :', error);
+    });
+
+// Gérer la réception d'une offre WebRTC
+socket.on('offer', (offer) => {
+    peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+        .then(() => {
+            return peerConnection.createAnswer();
+        })
+        .then((answer) => {
+            peerConnection.setLocalDescription(answer);
+            socket.emit('answer', answer);  // Envoyer la réponse au serveur
+        });
+});
+
+// Gérer la réception d'une réponse WebRTC
+socket.on('answer', (answer) => {
+    peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+});
+
+// Gérer la réception d'un ICE candidate
+socket.on('ice-candidate', (candidate) => {
+    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+});
+
+
+
+
