@@ -1,0 +1,176 @@
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+import cv2
+import numpy as np
+import base64
+
+app = Flask(__name__)
+socketio = SocketIO(app)
+
+# Process each frame (you can replace this with YOLO or any other processing)
+def process_frame(frame):
+    # Example: Convert frame to grayscale (replace with YOLO or other CV processing)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+# Handle video frame received via WebSocket
+@socketio.on('video_frame')
+def handle_video_frame(data):
+    # Decode the base64-encoded frame from the client
+    frame_data = base64.b64decode(data['image'])
+    np_frame = np.frombuffer(frame_data, dtype=np.uint8)
+    frame = cv2.imdecode(np_frame, cv2.IMREAD_COLOR)
+
+    # Process the frame (apply your YOLO model or any other image processing here)
+    processed_frame = process_frame(frame)
+
+    # Encode the processed frame back to JPEG
+    _, buffer = cv2.imencode('.jpg', processed_frame)
+    frame_base64 = base64.b64encode(buffer).decode('utf-8')
+
+    # Send the processed frame back to the client
+    emit('processed_frame', {'image': frame_base64})
+
+# Serve the main page
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000)
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Video Stream</title>
+
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <div class="video-container">
+        <h1>Real-time Video Streaming</h1>
+
+        <!-- Video capture from the client's camera -->
+        <video id="videoElement" autoplay class="video" playsinline></video>
+
+        <h2 class="text-center mt-4">Processed Video Stream</h2>
+        <!-- Processed video received from the server -->
+        <img id="processedVideo" alt="Processed Video" class="video" />
+    </div>
+
+    <!-- Include Socket.IO for WebSocket communication -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+
+    <!-- JavaScript to handle the video capture and WebSocket communication -->
+    <script>
+        const video = document.getElementById('videoElement');
+        const processedVideo = document.getElementById('processedVideo');
+        const socket = io.connect('http://localhost:5000');
+
+        // Access the user's camera
+        if (navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    video.srcObject = stream;
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    // Capture and send video frames every 100ms
+                    setInterval(() => {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Convert the canvas to a base64 encoded image (JPEG format)
+                        const dataUrl = canvas.toDataURL('image/jpeg');
+                        const base64Data = dataUrl.split(',')[1];  // Remove the data URL prefix
+
+                        // Send the frame to the server via WebSocket
+                        socket.emit('video_frame', { image: base64Data });
+                    }, 100);  // Capture every 100ms
+
+                })
+                .catch(function(err) {
+                    console.error("Error accessing the camera: ", err);
+                });
+        } else {
+            alert('Your browser does not support video capture.');
+        }
+
+        // Receive the processed frame from the server and display it
+        socket.on('processed_frame', function(data) {
+            processedVideo.src = 'data:image/jpeg;base64,' + data.image;
+        });
+    </script>
+
+</body>
+</html>
+
+
+
+from flask import Flask, Response
+import cv2
+
+app = Flask(__name__)
+
+# Capture the video stream (e.g., from the webcam)
+video_capture = cv2.VideoCapture(0)
+
+def generate_frames():
+    while True:
+        success, frame = video_capture.read()
+        if not success:
+            break
+        else:
+            # Process the frame (you can add YOLO processing here)
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+
+            # Return the frame as a byte stream
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/')
+def index():
+    return "<h1>MJPEG Streaming Example</h1><img src='/video_feed'>"
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
+
+
+
+
+
+import streamlit as st
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import cv2
+import numpy as np
+
+# Define a simple frame processing class
+class YOLOVideoProcessor(VideoTransformerBase):
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        
+        # Here you can implement your YOLO processing or any other CV processing
+        # For simplicity, let's convert the image to grayscale
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        processed_frame = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+        return processed_frame
+
+# Streamlit interface
+st.title("Real-time Video Processing with YOLO")
+
+# Using webrtc_streamer for video capture and processing
+webrtc_streamer(key="example", video_processor_factory=YOLOVideoProcessor)
