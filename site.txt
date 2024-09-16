@@ -1,156 +1,56 @@
-- app.py
-- templates/
-    - index.html
-- static/
-    - css/
-        - styles.css
-    - js/
-        - script.js
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+import datetime
 
+# Générer une clé privée
+key = rsa.generate_private_key(
+    public_exponent=65537,
+    key_size=2048,
+    backend=default_backend()
+)
 
+# Générer un nom de sujet (Subject Name)
+subject = issuer = x509.Name([
+    x509.NameAttribute(NameOID.COUNTRY_NAME, u"FR"),
+    x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Paris"),
+    x509.NameAttribute(NameOID.LOCALITY_NAME, u"Paris"),
+    x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"MonOrganisation"),
+    x509.NameAttribute(NameOID.COMMON_NAME, u"localhost"),
+])
 
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
-import cv2
-import numpy as np
-import base64
+# Créer le certificat auto-signé
+cert = x509.CertificateBuilder().subject_name(
+    subject
+).issuer_name(
+    issuer
+).public_key(
+    key.public_key()
+).serial_number(
+    x509.random_serial_number()
+).not_valid_before(
+    datetime.datetime.utcnow()
+).not_valid_after(
+    # Le certificat est valide pendant 365 jours
+    datetime.datetime.utcnow() + datetime.timedelta(days=365)
+).add_extension(
+    x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
+    critical=False,
+).sign(key, hashes.SHA256(), default_backend())
 
-app = Flask(__name__)
-socketio = SocketIO(app)
+# Écrire la clé privée dans un fichier PEM
+with open("key.pem", "wb") as f:
+    f.write(key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ))
 
-# Fonction de traitement YOLO (ou autre traitement des frames)
-def process_frame(frame):
-    # Traitement à faire ici (par exemple, YOLO)
-    return frame
+# Écrire le certificat dans un fichier PEM
+with open("cert.pem", "wb") as f:
+    f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-# Route principale pour servir la page HTML
-@app.route('/')
-def index():
-    return render_template('index.html')  # Rend le fichier index.html
-
-# Gérer les WebSockets pour recevoir les frames et renvoyer les images traitées
-@socketio.on('video_frame')
-def handle_video_frame(data):
-    # Décoder l'image base64 envoyée par le client
-    frame_data = base64.b64decode(data['image'])
-    np_frame = np.frombuffer(frame_data, dtype=np.uint8)
-    frame = cv2.imdecode(np_frame, cv2.IMREAD_COLOR)
-
-    # Traitement de l'image (par exemple, YOLO)
-    processed_frame = process_frame(frame)
-
-    # Encoder l'image traitée en base64 pour l'envoyer au client
-    _, buffer = cv2.imencode('.jpg', processed_frame)
-    frame_base64 = base64.b64encode(buffer).decode('utf-8')
-
-    # Envoyer l'image traitée au client via WebSocket
-    emit('processed_frame', {'image': frame_base64})
-
-# Démarrer le serveur Flask avec Socket.IO
-if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
-
-
-
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flux vidéo en temps réel</title>
-
-    <!-- Inclure le fichier CSS externe -->
-    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
-</head>
-<body>
-
-    <div class="video-container">
-        <h1>Flux vidéo en temps réel</h1>
-
-        <!-- Vidéo en direct depuis la caméra du client -->
-        <video id="videoElement" autoplay class="video"></video>
-
-        <h2 class="text-center mt-4">Vidéo traitée</h2>
-        <!-- Vidéo traitée renvoyée par le serveur -->
-        <img id="processedVideo" alt="Vidéo traitée" class="video" />
-    </div>
-
-    <!-- Inclure le fichier JavaScript externe -->
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-</body>
-</html>
-
-
-
-body {
-    background-color: #f8f9fa;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
-
-.video-container {
-    max-width: 800px;
-    width: 100%;
-    padding: 20px;
-    background-color: #ffffff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-}
-
-.video {
-    width: 100%;
-    height: auto;
-    border-radius: 8px;
-    border: 2px solid #dee2e6;
-}
-
-h1 {
-    text-align: center;
-    color: #343a40;
-    margin-bottom: 20px;
-}
-
-
-
-// Connexion WebSocket avec le serveur Flask
-const socket = io.connect('http://localhost:5000');
-const video = document.getElementById('videoElement');
-const processedVideo = document.getElementById('processedVideo');
-
-// Accéder à la caméra du client
-if (navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(function (stream) {
-            video.srcObject = stream;
-
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-
-            // Capturer et envoyer les frames vidéo toutes les 100ms
-            setInterval(() => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Convertir le frame capturé en base64
-                const dataUrl = canvas.toDataURL('image/jpeg');
-                const base64Data = dataUrl.split(',')[1];  // Supprimer le préfixe base64
-
-                // Envoyer le frame au serveur Flask via WebSocket
-                socket.emit('video_frame', { image: base64Data });
-            }, 100);  // Envoie un frame toutes les 100ms
-        })
-        .catch(function (err) {
-            console.log("Erreur lors de l'accès à la caméra : " + err);
-        });
-}
-
-// Réception des frames traitées par le serveur Flask
-socket.on('processed_frame', function (data) {
-    processedVideo.src = 'data:image/jpeg;base64,' + data.image;
-});
+print("Certificat et clé privée générés avec succès.")
